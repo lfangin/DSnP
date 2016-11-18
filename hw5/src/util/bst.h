@@ -193,7 +193,7 @@ public:
      else if(Child == 1){
        if(pos._node -> _parent -> _right)
      }
-     else if(Child == 2){
+     else if(Child == 2){ //hi
 
      }
      else{
@@ -250,6 +250,7 @@ private:
      if(b -> _right == NULL) return NULL;
      else return(min(b -> _right));
    }
+   bool
 
 };
 
