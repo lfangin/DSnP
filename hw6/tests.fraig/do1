@@ -1,0 +1,25 @@
+cirr sim11.aag
+cirp -n
+usage
+cirp -fl
+cirp -po
+cirp -pi
+cirg 300 -fani 200
+cirw
+cirr -r test1.aag
+cirp -n
+usage
+cirp -fl
+cirp -po
+cirp -pi
+cirg 300 -fani 200
+cirw
+cirr -r test2.aag
+cirp -n
+usage
+cirp -fl
+cirp -po
+cirp -pi
+cirg 300 -fani 200
+cirw
+q -f
