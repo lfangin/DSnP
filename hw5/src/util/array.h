@@ -98,8 +98,9 @@ public:
    }
    void pop_front() {
      if(empty()) return;
-     if(_size >= 2) *_data = *(_data+_size-1);
-     -- _size;
+     erase(begin());
+     //if(_size >= 2) *_data = *(_data+_size-1);
+     //-- _size;
    }
    void pop_back() {
      -- _size ;
@@ -122,8 +123,10 @@ public:
    void clear() { _size = 0; _isSorted = false; }
 
    // This is done. DO NOT change this one.
-   void sort() const { if (!empty()) ::sort(_data, _data+_size);
-    _isSorted = true;
+   void sort() const {
+     //if(_isSorted) return;
+     if (!empty()) ::sort(_data, _data+_size);
+    //_isSorted = true;
    }
 
    // Nice to have, but not required in this homework...

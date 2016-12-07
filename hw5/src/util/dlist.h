@@ -151,14 +151,10 @@ public:
 
    void sort() const {
      if(_isSorted == true) return;
-      for(iterator i = iterator(_head->_prev);i!= begin();i--){
-        bool swapped = false;
-        for(iterator j = begin();j!=i;){
-            swap(j,++j,swapped);
-        }
-        if(!swapped) break;
-      }
-      _isSorted = true;
+     //bubbleSort();
+     srand(time(NULL));
+     quickSort(begin(),iterator(_head->_prev));
+     _isSorted = true;
    }
 
 private:
@@ -166,18 +162,77 @@ private:
    mutable bool   _isSorted; // (optionally) to indicate the array is sorted
 
    // [OPTIONAL TODO] helper functions; called by public member functions
+
+   void bubbleSort() const{
+      for(iterator i = iterator(_head->_prev);i!= begin();i--){
+        bool swapped = false;
+        for(iterator j = begin();j!=i;){
+            bubbleswap(j,++j,swapped);
+        }
+        if(!swapped) break;
+      }
+   }
+
+   void quickSort(iterator left, iterator right) const{
+         if(right == left) return;
+         if(left._node->_next == right._node){
+           if(*(left) < *(right)) return;
+           else {
+              swap(left,right);
+              return;
+           }
+         }
+         int count = 0 ;
+         if(isrighterthan(left,right,count)) return;
+         iterator pivot = left;
+         //cout << "count = "<<count<<endl;
+         int pivotIndex = (rand()%count) +1;
+         //cout <<"pivotIndex = "<<pivotIndex<<endl;
+         for(int i =1 ;i!= pivotIndex;i++) ++pivot;
+
+         swap(pivot,right);
+         iterator swapIndex = left;
+         for (iterator it = left; it != right; ++it){
+             if (*(it) <= *(right)){
+                 swap(it, swapIndex);
+                 ++swapIndex;
+             }
+         }
+         swap(swapIndex, right);
+
+         //if(swapIndex != _head->_next)
+            quickSort(left, iterator(swapIndex._node->_prev));
+         //if(swapIndex != _head->_prev)
+            quickSort( iterator(swapIndex._node->_next), right);
+   }
+
    bool find(const T& x, iterator& it) const{
      for(it = begin();it!=end();it++)
        if(*(it) == x) return true;
      return false;
    }
-   void swap(iterator p, iterator n,bool& swapped)const{
+   void bubbleswap(iterator p, iterator n,bool& swapped)const{
      if(*p > *n){
        T tmp = *p;
        *p = *n;
        *n = tmp;
        swapped = true;
      }
+   }
+   void swap(iterator p, iterator n)const{
+       T tmp = *p;
+       *p = *n;
+       *n = tmp;
+   }
+   bool isrighterthan(iterator l , iterator r,int& c)const{
+     iterator it = l;
+     if(l._node == _head || r._node == _head) return true;
+     while(it != r){
+       if(it._node == _head) return true;
+       ++it;
+       ++c;
+     }
+     return false;
    }
 };
 

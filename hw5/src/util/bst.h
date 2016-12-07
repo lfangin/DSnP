@@ -43,8 +43,6 @@ class BSTree
 public:
   BSTree() {
      _tail = new BSTreeNode<T>(T());
-     //_root = _tail;
-     //_root->_right = _root->_left = _root; // _root is a dummy node
      _size = 0;
   }
   ~BSTree() { clear(); delete _tail; }
@@ -59,29 +57,32 @@ public:
      T& operator * () { return _node->_data; }
      iterator& operator ++ () {
        if(_node -> _right) _node = min(_node -> _right);
-       //else if(_node == _tail)
        else {
          while(1){
            if(_node -> _parent -> _left == _node){
              _node = _node -> _parent;
              break;
            }
-           //else if(_node -> _parent == NULL) break;
            _node = _node -> _parent;
          }
        }
        return *(this);
+
      }
 
      iterator& operator -- () {
-       if(_node -> _left) _node = max(_node -> _left);
+       if(_node->_left) _node = max(_node->_left);
        else{
-         while(1){
-           if(_node -> _parent -> _right == _node){
-             _node = _node -> _parent;
+        while(1){
+          if(_node->_parent ==0){
+            _node = NULL;
+            break;
+          }
+          else if(_node == _node->_parent->_right){
+             _node = _node->_parent;
              break;
-           }
-           _node = _node -> _parent;
+          }
+          _node = _node->_parent;
          }
        }
        return *(this);
@@ -138,27 +139,27 @@ public:
        bool ismax = false;
        while(1){
          if( x < (i->_data)){
-           if(i -> _left) i = i -> _left;
+           if(i -> _left) i = (i -> _left);
            else { atLeft = true; break;}
          }
          else {
            if(i -> _right){
-             if(i -> _right == _tail){
+             if((i -> _right) == _tail){
                ismax = true;
                break;
              }
-             else i = i -> _right;
+             else i = (i -> _right);
            }
            else break;
          }
        }
        BSTreeNode<T>* tmp = new BSTreeNode<T>(x,i);
-       if(atLeft) i -> _left = tmp;
+       if(atLeft) (i -> _left) = tmp;
        else{
-         i -> _right = tmp;
+         (i -> _right) = tmp;
          if(ismax){
            (_tail -> _parent) = tmp;
-           tmp -> _right = _tail;
+           (tmp -> _right) = _tail;
          }
        }
      }
@@ -173,39 +174,75 @@ public:
      erase(--end());
    }
 
-   // return false if nothing to erase
    bool erase(iterator pos) {
      if(empty()) return false;
      if(_size == 1){
        delete _root;
-       _tail -> _parent = NULL;
+       _tail->_parent = NULL;
      }
+
+     bool isrightchild = false;
+     bool isroot = false;
+     if(pos._node != _root){
+       if(pos._node == (pos._node -> _parent -> _right))
+          isrightchild = true;
+     }
+     else isroot = true;
+
      int Child = 0 ;
-     if(pos._node -> _right) Child += 1;
-     if(pos._node -> _left)  Child += 2;
+     if(pos._node->_right) Child += 1;
+     if(pos._node->_left)  Child += 2;
 
      if(Child == 0){
-       if(pos._node -> _parent -> _right == pos._node)
-          pos._node -> _parent -> _right = NULL;
-       else pos._node -> _parent -> _left = NULL;
+       setParent_Child(isrightchild,pos,NULL);
        delete pos._node;
      }
+     else if(Child == 3){
+       if(_tail == pos._node->_right){
+         BSTreeNode<T>* tmp = max(pos._node->_left);
+         tmp->_right = _tail;
+         _tail->_parent = tmp;
+         if(!isroot){
+           setParent_Child(isrightchild,pos,(pos._node->_left));
+           pos._node->_left->_parent = pos._node->_parent;
+           delete pos._node;
+         }
+        else _root = pos._node->_left;
+       }
+       else{
+         iterator it = iterator(succ(pos._node));
+         T tmp = *it;
+         *it = *pos;
+         *pos = tmp;
+         erase(it);
+         ++ _size;
+       }
+     }
      else if(Child == 1){
-       if(pos._node -> _parent -> _right)
+       if(isroot){
+         _root = pos._node->_right;
+       }
+       else{
+         setParent_Child(isrightchild,pos,(pos._node->_right));
+         (pos._node->_right->_parent) = (pos._node->_parent);
+         delete pos._node;
+       }
      }
-     else if(Child == 2){ //hi
-
+     else if(Child ==2){
+       if(isroot){
+         _root = pos._node->_left;
+       }
+       else{
+         setParent_Child(isrightchild,pos,(pos._node->_left));
+         (pos._node ->_left->_parent) = (pos._node->_parent);
+         delete pos._node;
+       }
      }
-     else{
-       iterator it = iterator(succ(pos._node));
-       T tmp = *it;
-       *it = *pos;
-       *pos = tmp;
-       erase(it);
-     }
+     _size --;
      return true;
    }
    bool erase(const T& x) {
+
      if(empty()) return false;
      iterator it ;
      if(!find(x,it)) return false;
@@ -214,13 +251,11 @@ public:
    }
 
    void clear() {
-     BSTreeNode<T>* tmp;
-     iterator it = begin();
-     while(1){
-       tmp = it._node;
+     iterator tmp, it = begin(), e = end();
+     while(it != e){
+       tmp = it;
        ++it;
-       delete tmp;
-       if(it == end()) break;
+       erase(tmp);
      }
    }  // delete all nodes except for the dummy node
 
@@ -234,10 +269,12 @@ private:
    size_t _size;
 
    bool find(const T& x, iterator& it)const{
-     for(iterator it = begin();it != end();it++)
-       if(*it == x) return true;
+     iterator e = end();
+     for(it = begin();it != e;++it)
+       if(*(it) == x) return true;
      return false;
    }
+
    BSTreeNode<T>* min(BSTreeNode<T>* b)const{
      if(b -> _left == NULL) return b;
      else return (min(b -> _left));
@@ -250,7 +287,14 @@ private:
      if(b -> _right == NULL) return NULL;
      else return(min(b -> _right));
    }
-   bool
+   void setParent_Child(const bool& isright,const iterator& it,BSTreeNode<T>* c )const{
+     if(isright){
+       (it._node -> _parent -> _right) = c;
+     }
+     else{
+       (it._node -> _parent -> _left) = c;
+     }
+   }
 
 };
 
