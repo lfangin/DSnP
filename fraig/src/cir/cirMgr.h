@@ -23,6 +23,8 @@ using namespace std;
 
 extern CirMgr *cirMgr;
 
+
+
 class CirMgr
 {
 public:

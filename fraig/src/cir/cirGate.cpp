@@ -31,9 +31,12 @@ CirGate* CirGate::getfanin(size_t in_num) const{
   return (CirGate*)(size_t(_faninList[in_num])& ~size_t(NEG));
 }
 CirGate* CirGate::getfanout(size_t in_num) const{
+  if(in_num>=_fanoutList.size()){
+    //cout << "get " << _gateID <<"fanout "<<in_num<<endl;
+    return 0;
+  }
   return (CirGate*)_fanoutList[in_num];
 }
-//CirGate* CirGate::getfanout(size_t out_num) const{}
 
 void CirGate::setfanin(CirGate* g,size_t phase ){
   g = (CirGate*)(size_t(g) + phase);
@@ -171,49 +174,52 @@ void CirGate::erasefanout(unsigned n){
   size_t s = _fanoutList.size();
   //cout << "fanoutsize" << s<<endl;
   //cout << "before erasefanout"<<'\n';
-  swap(_fanoutList[n],_fanoutList[s-1]);
+  _fanoutList[n] = _fanoutList.back();
+  //swap(_fanoutList[n],_fanoutList[s-1]);
   _fanoutList.resize(s-1);
   //cout << "after erasefanout"<<'\n';
 }
 
 void CirGate::erasefanin(unsigned n){
   size_t s = _faninList.size();
-  swap(_faninList[n],_faninList[s-1]);
+  _faninList[n] = _faninList.back();
+  //swap(_faninList[n],_faninList[s-1]); 
   _faninList.resize(s-1);
 }
 
-void CirGate::resetfanin(CirGate* r,bool& org_phase){
-  CirGate* tmp;
-  bool phase = 0;
-   for(size_t i =0;i<_fanoutList.size();i++){
-     tmp = _fanoutList[i];
-     for(int j=0; j < tmp->faninsize();j++){
-       if(_gateID==tmp->getfanin(j)->getgateID()){
-         if(tmp->isInv(j)) phase = 1;
-         tmp->erasefanin(j);
+void CirGate::resetfanin(CirGate* r,bool org_phase){
+
+  if(!r) r = cirMgr->getGate(0);
+   for(size_t i =0;i<fanoutsize();i++){
+     CirGate* out = getfanout(i);
+     bool phase = 0;
+     for(int j=0; j < 2;j++){
+       if(this==out->getfanin(j)){
+         if(out->isInv(j)) phase = 1;
+         out->erasefanin(j);
+         out -> setfanin(r,phase^org_phase);
+         r -> setfanout(out);
          //cout << "erase "<<_gateID<<"from fanout" << tmp->getgateID()<<endl;
-         break;
+         //break;
        }
      }
-     org_phase = (phase^org_phase);
      //if(org_phase) cout<<"I did set the phase errrrrr"<<endl;
-     if(!r) tmp -> setfanin(cirMgr->getGate(0),org_phase);
-     else tmp -> setfanin(r,org_phase);
    }
-   _faninList.resize(0);
+   _fanoutList.resize(0);
 }//reset the faninlist of fanout
 void CirGate::resetfanout(CirGate* r ){
-  CirGate* tmp;
-   for(size_t i =0;i<_faninList.size();i++){
-     tmp = _faninList[i];
-     for(int j=0; j < tmp->fanoutsize();j++){
-       if(_gateID== tmp->getfanout(j)->getgateID()){
-         tmp->erasefanout(j);
-         break;
+   for(size_t i =0; i<2 ;i++){
+     CirGate* in = getfanin(i);
+     for(size_t j=0; j < in->fanoutsize();j++){
+       //cout << "tmp ID" <<tmp->getgateID()<<endl;
+       if(this== in->getfanout(j)){
+         in->erasefanout(j);
+         //break;
        }
      }
-     if(!r) tmp -> setfanout(cirMgr->getGate(0));
-     else tmp -> setfanout(r);
+     //r ->setfanin()
+     //if(!r) in -> setfanout(cirMgr->getGate(0));
+     //else in -> setfanout(r);
    }
    _faninList.resize(0);
 }//reset the fanoutlist of fanin

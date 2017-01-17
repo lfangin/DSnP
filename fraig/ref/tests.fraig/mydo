@@ -1,0 +1,2 @@
+Error: cannot open file "dotest"!!
+Usage: cirTest [ -File < doFile > ]

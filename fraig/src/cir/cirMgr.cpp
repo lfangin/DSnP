@@ -375,7 +375,7 @@ CirMgr::printFloatGates()
     }
   }
   if(_floatinglist.size()!=0){
-    //std::sort(_floatinglist.begin(),_floatinglist.end());
+    std::sort(_floatinglist.begin(),_floatinglist.end());
     cout << "Gates with floating fanin(s):";
     for(vector<unsigned>::iterator i = _floatinglist.begin(); i!= _floatinglist.end();++i)
       cout << " " << *i ;
@@ -449,6 +449,50 @@ CirMgr::writeAag(ostream& outfile) const
 void
 CirMgr::writeGate(ostream& outfile, CirGate *g) const
 {
+  if(g->getType()!=AIG_GATE) return;
+  unsigned gid = g->getgateID();
+  vector<unsigned> tmp_in;
+  unsigned count_m = gid,count_a = 0;
+  //unsigned i;
+  outfile << "aag" <<' ';
+  //header
+  for(unsigned i=0;_dfsList[i]!=gid;i++){
+    if(id2gate[_dfsList[i]]->getType()==PI_GATE) tmp_in.push_back(_dfsList[i]);
+    else if(id2gate[_dfsList[i]]->getType()==AIG_GATE){
+      if(_dfsList[i] > count_m) count_m = _dfsList[i];
+      count_a++;
+    }
+  }
+  outfile << count_m << ' ' << tmp_in.size() << ' ' << "0 1 "
+    << ++count_a << '\n';
+  //input
+  std::sort(tmp_in.begin(),tmp_in.end());
+  for(unsigned j = 0;j < tmp_in.size();j++)
+    outfile << 2*(tmp_in[j]) << '\n';
+  //output
+  outfile << gid*2 <<'\n';
+  //AIG
+  CirGate* a;
+  for(unsigned j=0;_dfsList[j]!=gid;j++){
+    a = id2gate[_dfsList[j]];
+    if(a->getType()==AIG_GATE){
+      outfile << 2*(a->getgateID()) << ' '
+       << 2*(a->getfanin(0)->getgateID())+(a->isInv(0)) << ' '
+       << 2*(a->getfanin(1)->getgateID())+(a->isInv(1)) << '\n';
+    }
+  }
+  outfile << 2*(gid) << ' '
+    << 2*(g->getfanin(0)->getgateID())+(g->isInv(0)) << ' '
+    << 2*(g->getfanin(1)->getgateID())+(g->isInv(1)) << '\n';
+  //PI symbol
+  string str;
+  for(unsigned j = 0;j < tmp_in.size();j++){
+    str = id2gate[tmp_in[j]] -> getSymbol();
+    if(str.size()!=0) outfile << 'i' << j << ' ' << str << '\n';
+  }
+  outfile << "o0 " << gid << '\n';
+  outfile << "c\n";
+  outfile << "Write gate ("<< gid <<") by queline\n";
 }
 
 void CirMgr::dfs(){
@@ -483,26 +527,7 @@ CirMgr::getTokens(const string& str, vector<string>& tok){
   }
 }
 
-void CirMgr::sweep(){
-  size_t s = id2gate.size();
-  for(size_t i = 0; i<s;i++){
-    CirGate* g = id2gate[i];
-    if(!g) continue;
-    //cout << g->getgateID() << '\n';
-    if(!g->get_inDFS()){
-      //cout<<"not in dfs"<<endl;
-      g->cleanFanin();
-      //cout << "afterclean fanin"<<'\n';
-      g->cleanFanout();
-      //cout << "afterclean fanout"<<'\n';
-      if(id2gate[i]->getType()!= PI_GATE&&id2gate[i]->getType()!= CONST_GATE){
-        cout << "Sweeping: "<< id2gate[i]->getTypeStr()<< '('
-          <<id2gate[i]->getgateID()<<") removed..."<<'\n';
-        id2gate[i] = 0;
-      }
-    }
-  }
-}
+
 /*
 void CirMgr::revFloat(unsigned id)
 {
@@ -515,57 +540,3 @@ void CirMgr::revFloat(unsigned id)
    }
 }
 */
-void CirMgr::optimize(){
-  size_t s = _dfsList.size();
-  //for(size_t i =0;i < s;i++)
-    //cout << _dfsList[i]<<endl;
-
-  for(size_t i =0;i < s;i++){
-    CirGate* g = id2gate[_dfsList[i]];
-    if(!g) continue;
-    if(g->getType()!=AIG_GATE) continue;
-    bool with0 = false;
-    bool with1 = false;
-    size_t tmp ; //const at tmp;
-    size_t pos ;
-    for(tmp = 0;tmp < 2;tmp++){
-      //cout << "fanin of "<< g->getgateID() <<"is"<<g->getfanin(tmp)->getgateID();
-      //if(g->isInv(tmp)) cout<<"!";
-      //cout<<'\n';
-
-      if(g->getfanin(tmp)->getType()==CONST_GATE){
-        if(g->isInv(tmp)) with1 = true;
-        else with0 = true;
-        break;
-      }
-    }
-    if(tmp!=2){
-      pos = (tmp==1)?0:1;//with const,non-const at pos
-      //if(getfanin(pos)->getType()==UNDEF_GATE) revFL = true;
-    }
-    else if((g->getfanin(0)->getgateID())==(g->getfanin(1)->getgateID())){
-      if(!(g->isInv(0))==(g->isInv(1))) with0 = true;
-      else{ with1 = true; pos = 0; }
-    }
-    if(with0){
-      bool p = 0;
-      g->resetfanin(0,p);
-      g->resetfanout();
-      //if(revFL) revFloat(i);
-      cout << "Simplifying: 0 merging " <<  g->getgateID() << "..."<<endl;
-      id2gate[_dfsList[i]] = 0;
-    }
-    else if(with1){
-      CirGate* r = g->getfanin(pos);
-      bool p = g->isInv(pos);
-      g->resetfanin(r,p);
-      g->resetfanout(r);
-      cout << "Simplifying: " << r->getgateID() <<" merging ";
-      if(g->isInv(pos)) cout << '!';
-      cout << g->getgateID() <<"..." <<endl;
-      //if(revFL){revFloat(i); _floatinglist.push_back();}
-      id2gate[_dfsList[i]] = 0;
-    }
-  }
-  dfs();
-}

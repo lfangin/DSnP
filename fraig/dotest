@@ -1,0 +1,8 @@
+cirr sim09.aag
+cirsw
+ciropt
+cirstr
+cirp -n
+cirp -s
+usage
+q -f

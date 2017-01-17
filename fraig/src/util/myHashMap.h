@@ -21,17 +21,20 @@ using namespace std;
 // To use HashMap ADT, you should define your own HashKey class.
 // It should at least overload the "()" and "==" operators.
 //
-// class HashKey
-// {
-// public:
-//    HashKey() {}
-// 
-//    size_t operator() () const { return 0; }
-// 
-//    bool operator == (const HashKey& k) const { return true; }
-// 
-// private:
-// };
+ class HashKey
+ {
+ public:
+    HashKey(size_t _fin0,size_t _fin1):_keyValue((_fin0<<32)+_fin1) {
+      //cout << "key: "<<((_fin0<<32)+_fin1)<<endl;
+    }
+
+    size_t operator() () const { return _keyValue; }
+
+    bool operator == (const HashKey& k) const { return _keyValue == k._keyValue; }
+
+ private:
+   size_t _keyValue;
+ };
 //
 template <class HashKey, class HashData>
 class HashMap
@@ -56,8 +59,69 @@ public:
       friend class HashMap<HashKey, HashData>;
 
    public:
+     iterator(HashMap<HashKey,HashData>* h = 0,size_t r =0,size_t c = 0):
+      _hash(h),_row(r),_col(c) {}
 
+     iterator(const iterator& i):
+      _hash(i._hash),_row(i._row),_col(i._col) {}
+     ~iterator() {}
+     const HashNode& operator * () const { return (*_hash[_row][_col]); }
+     HashNode& operator * () { return (*_hash[_row][_col]); }
+     iterator& operator ++ () {
+       if(!_hash) return *this;
+       if(_row >= _hash->_numBuckets) return *this;
+       if(++_col >= _hash[_row].size()){
+         while(1){
+           if(_row==_hash->_numBuckets) break;
+           else if(!_hash[_row].empty()) break;
+           ++_row;
+         }
+         _col = 0;
+       }
+       return (*this);
+     }
+     iterator operator ++ (int) {
+       iterator tmp = *this;
+       ++ *this;
+       return tmp;
+     }
+     iterator& operator -- () {
+       if(!_hash) return *this;
+       if(_col==0){
+         if(_row==0) return *this;
+         while(_hash[--_row].empty())
+           if(_row==0) return *this;
+         _col = _hash[_row].size()-1;
+       }
+       else --_col;
+       return (*this);
+     }
+     iterator operator -- (int) {
+       iterator tmp = *this;
+       -- *this;
+       return tmp;
+     }
+     iterator& operator = (const iterator& i) {
+       _hash = i._hash;
+       _row = i._row;
+       _col = i._col;
+       return (*this);
+     }
+     bool operator != (const iterator& i) const {
+       if(_row!=i._row || _hash!= i._hash|| _col!=i._col)
+          return true;
+       return false;
+     }
+     bool operator == (const iterator& i) const {
+       if(_row==i._row && _col==i._col && _hash== i._hash)
+          return true;
+       return false;
+      }
    private:
+     HashMap<HashKey,HashData>* _hash;
+     size_t _row;
+     size_t _col;
+
    };
 
    void init(size_t b) {
@@ -77,36 +141,101 @@ public:
    // TODO: implement these functions
    //
    // Point to the first valid data
-   iterator begin() const { return iterator(); }
+   iterator begin() const {
+     size_t i ;
+     for(i = 0; i < _numBuckets;i++){
+       if(_buckets[i].size()!=0){
+         return iterator(_buckets,i);
+       }
+     }
+     return end();
+   }
    // Pass the end
-   iterator end() const { return iterator(); }
+   iterator end() const {
+     return iterator(_buckets,_numBuckets);
+   }
    // return true if no valid data
-   bool empty() const { return true; }
+   bool empty() const { return (end() == begin()); }
    // number of valid data
-   size_t size() const { size_t s = 0; return s; }
+   size_t size() const {
+     size_t s = 0;
+     for(size_t i =0;i < _numBuckets;i++){
+       cout << _buckets[i].size() << endl;
+       s += _buckets[i].size();
+     }
+     return s;
+   }
 
    // check if k is in the hash...
    // if yes, return true;
    // else return false;
-   bool check(const HashKey& k) const { return false; }
+   // i is for recording col num to insert()
+   bool check(const HashKey& k, size_t& i)  {
+     size_t n = bucketNum(k);
+     for(i =0;i < _buckets[n].size();i++)
+       if(_buckets[n][i].first == k) return true;
+     return false;
+   }
 
    // query if k is in the hash...
    // if yes, replace d with the data in the hash and return true;
    // else return false;
-   bool query(const HashKey& k, HashData& d) const { return false; }
+   bool query(const HashKey& k, HashData& d) const {
+     size_t n = bucketNum(k);
+     size_t i;
+     for(i = 0;i < _buckets[n].size();i++)
+        if(k == _buckets[n][i].first) break;
+     if(i!=_buckets[n].size()){
+       d = (_buckets[n][i].second);
+       return true;
+     }
+     return false;
+   }
 
    // update the entry in hash that is equal to k (i.e. == return true)
    // if found, update that entry with d and return true;
    // else insert d into hash as a new entry and return false;
-   bool update(const HashKey& k, HashData& d) { return false; }
+   bool update(const HashKey& k, HashData& d) {
+     size_t n = bucketNum(k);
+     size_t i;
+     for(i = 0;i < _buckets[n].size();i++)
+        if(k == _buckets[n][i].first) break;
+     if(i!=_buckets[n].size()){
+       _buckets[n][i].second = d;
+       return true;
+     }
+     _buckets[n].push_back(HashNode(k,d));
+     return false;
+   }
 
    // return true if inserted d successfully (i.e. k is not in the hash)
    // return false is k is already in the hash ==> will not insert
-   bool insert(const HashKey& k, const HashData& d) { return true; }
+   bool insert(const HashKey& k, HashData& d) {
+     size_t n = bucketNum(k);
+     size_t i;
+     if(check(k,i)){
+       d = (_buckets[n][i].second);
+       return false;
+     }
+     _buckets[n].push_back(HashNode(k,d));
+     return true;
+   }
 
    // return true if removed successfully (i.e. k is in the hash)
    // return fasle otherwise (i.e. nothing is removed)
-   bool remove(const HashKey& k) { return false; }
+   bool remove(const HashKey& k) {
+     size_t n = bucketNum(k);
+     size_t i ;
+     size_t s = _buckets[n].size();
+     for(i = 0;i < s;++i)
+        if(k == _buckets[n][i].first) break;
+     if(i!= s){
+       _buckets[n][i] = _buckets[n].back();
+       _buckets[n].resize(--s);
+       return true;
+     }
+     return false;
+   }
 
 private:
    // Do not add any extra data member
@@ -129,14 +258,14 @@ private:
 // {
 // public:
 //    CacheKey() {}
-//    
+//
 //    size_t operator() () const { return 0; }
-//   
+//
 //    bool operator == (const CacheKey&) const { return true; }
-//       
+//
 // private:
-// }; 
-// 
+// };
+//
 template <class CacheKey, class CacheData>
 class Cache
 {

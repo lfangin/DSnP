@@ -66,7 +66,7 @@ public:
 
    // Printing functions
    virtual void printGate(int& ) const = 0;
-   virtual bool isAig() const { return false; }
+   virtual bool isAig() const { return (_type==AIG_GATE); }
    void reportGate() const;
    void reportFanin(int level) const;
    void reportFanout(int level) const;
@@ -77,7 +77,7 @@ public:
    void cleanFanout(){_fanoutList.resize(0);}
    void erasefanout(unsigned n);
    void erasefanin(unsigned n);
-   void resetfanin(CirGate* r ,bool& org_phase);
+   void resetfanin(CirGate* r ,bool org_phase);
    void resetfanout(CirGate* r = 0);
 private:
 

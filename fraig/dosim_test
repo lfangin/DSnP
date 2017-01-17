@@ -1,0 +1,29 @@
+cirr -r sim09.aag
+ciropt
+cirp -n
+cirstr
+cirp -n
+cirp -s
+usage
+cirr -r sim05.aag
+ciropt
+cirp -n
+cirstr
+cirp -n
+cirp -s
+usage
+cirr -r sim06.aag
+ciropt
+cirp -n
+cirstr
+cirp -n
+cirp -s
+usage
+cirr -r sim07.aag
+ciropt
+cirp -n
+cirstr
+cirp -n
+cirp -s
+usage
+q -f
